@@ -77,7 +77,10 @@
             
             let message = document.createElement("div");
             message.classList.add("message");
-            message.innerText = text;
+            
+            let timestamp = new Date().toLocaleTimeString();
+            message.innerText = `${text} \n (${timestamp})`;
+            
             document.body.appendChild(message);
             
             let x = Math.random() * (window.innerWidth - 100);

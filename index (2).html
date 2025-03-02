@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fatjao behenchodo</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1f1c2c, #928dab);
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+            color: white;
+        }
+        .container {
+            background: rgba(7, 218, 42, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        h1 {
+            font-size: 1.5rem;
+        }
+        input {
+            width: 80%;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            margin-bottom: 10px;
+        }
+        button {
+            background: linear-gradient(45deg, #7e8b44, #5e39b3);
+            border: none;
+            padding: 10px 20px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s ease;
+        }
+        button:hover {
+            transform: scale(1.1);
+        }
+        .message {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8);
+            color: black;
+            padding: 8px 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            cursor: pointer;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Anonymous Board</h1>
+        <input type="text" id="messageInput" placeholder="Enter message">
+        <button onclick="dropMessage()">Drop Message</button>
+    </div>
+    <script>
+        function dropMessage() {
+            let input = document.getElementById("messageInput");
+            let text = input.value.trim();
+            if (!text) return;
+            
+            let message = document.createElement("div");
+            message.classList.add("message");
+            message.innerText = text;
+            document.body.appendChild(message);
+            
+            let x = Math.random() * (window.innerWidth - 100);
+            let y = Math.random() * (window.innerHeight - 100);
+            message.style.left = `${x}px`;
+            message.style.top = `${y}px`;
+            
+            message.addEventListener("click", () => message.remove());
+            input.value = "";
+        }
+    </script>
+</body>
+</html>

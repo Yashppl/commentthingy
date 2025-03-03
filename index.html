@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>fatjao behenchodo</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval';">
+    <title>Anonymous Board</title>
     <style>
         body {
             font-family: 'Poppins', sans-serif;
@@ -11,85 +12,240 @@
             height: 100vh;
             margin: 0;
             overflow: hidden;
-            position: relative;
             color: white;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            flex-direction: column;
+            padding-top: 20px;
         }
         .container {
             background: rgba(7, 218, 42, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 20px;
-            width: 300px;
+            width: 320px;
             text-align: center;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
         }
-        h1 {
-            font-size: 1.5rem;
-        }
+        h1 { font-size: 1.5rem; margin: 0; }
+        #subtitle { font-size: 14px; color: lightgrey; margin: 5px 0 15px; }
         input {
-            width: 80%;
+            width: 85%;
             padding: 10px;
             border-radius: 5px;
             border: none;
             margin-bottom: 10px;
+            background: rgba(255, 255, 255, 0.9);
         }
         button {
-            background: linear-gradient(45deg, #7e8b44, #5e39b3);
+            background: linear-gradient(45deg, #ff6b6b, #ff9f43);
             border: none;
-            padding: 10px 20px;
+            padding: 10px 25px;
             color: white;
             font-size: 1rem;
             font-weight: bold;
             border-radius: 50px;
             cursor: pointer;
-            transition: 0.3s ease;
-        }
-        button:hover {
-            transform: scale(1.1);
+            transition: transform 0.3s ease;
         }
         .message {
             position: absolute;
-            background: rgba(255, 255, 255, 0.8);
-            color: black;
-            padding: 8px 12px;
-            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            color: #2d3436;
+            padding: 12px 18px;
+            border-radius: 15px;
             font-size: 14px;
-            cursor: pointer;
+            cursor: move;
             user-select: none;
+            text-align: center;
+            min-width: 80px;
+            min-height: 40px;
+            max-width: 200px;
+            overflow: hidden;
+            word-wrap: break-word;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            animation: dropIn 0.4s ease-out;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .message:hover {
+            transform: scale(1.1) rotate(2deg);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+        .resizer {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #2210c9;
+            bottom: -5px;
+            right: -5px;
+            cursor: nwse-resize;
+            border-radius: 50%;
+        }
+        .close-btn {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #ff6b6b;
+            top: -5px;
+            left: -5px;
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        @keyframes dropIn {
+            0% { opacity: 0; transform: translateY(-20px) scale(0.9); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Anonymous Board</h1>
-        <input type="text" id="messageInput" placeholder="Enter message">
-        <button onclick="dropMessage()">Drop Message</button>
+        <p id="subtitle">Drop your thoughts anywhere! No one knows who wrote it !!</p>
+        <input type="text" id="messageInput" placeholder="Type your message...">
+        <button onclick="dropMessage()">Launch Message!! 🚀</button>
     </div>
+    
+    <svg id="wires" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;"></svg>
+
     <script>
+        let messages = [];
+        let wires = [];
+        
         function dropMessage() {
-            let input = document.getElementById("messageInput");
-            let text = input.value.trim();
+            const input = document.getElementById("messageInput");
+            const text = input.value.trim();
             if (!text) return;
             
-            let message = document.createElement("div");
-            message.classList.add("message");
-            
-            let timestamp = new Date().toLocaleTimeString();
-            message.innerText = `${text} \n (${timestamp})`;
-            
+            const message = createMessageElement(text);
             document.body.appendChild(message);
             
-            let x = Math.random() * (window.innerWidth - 100);
-            let y = Math.random() * (window.innerHeight - 100);
+            const rect = message.getBoundingClientRect();
+            message.dataset.initialWidth = rect.width;
+            message.dataset.initialFontSize = parseFloat(window.getComputedStyle(message).fontSize);
+            
+            if(messages.length > 0) {
+                createWire(messages[messages.length-1], message);
+            }
+            messages.push(message);
+            
+            // Add close functionality
+            message.querySelector('.close-btn').addEventListener('click', () => {
+                message.remove();
+                messages = messages.filter(m => m !== message);
+                // Remove connected wires
+                wires = wires.filter(wire => {
+                    const keep = wire.startElem !== message && wire.endElem !== message;
+                    if (!keep) wire.line.remove();
+                    return keep;
+                });
+                updateAllWires();
+            });
+            
+            input.value = "";
+            makeDraggable(message);
+            makeResizable(message.querySelector(".resizer"));
+        }
+
+        function createMessageElement(text) {
+            const message = document.createElement("div");
+            message.className = "message";
+            
+            const x = Math.random() * (window.innerWidth - 200);
+            const y = Math.random() * (window.innerHeight - 100);
             message.style.left = `${x}px`;
             message.style.top = `${y}px`;
             
-            message.addEventListener("click", () => message.remove());
-            input.value = "";
+            const timestamp = new Date().toLocaleTimeString();
+            message.innerHTML = `
+                <div class="content">
+                    <div class="text">${text}</div>
+                    <span class="timestamp">${timestamp}</span>
+                </div>
+                <div class="close-btn">×</div>
+                <div class="resizer"></div>
+            `;
+            
+            return message;
+        }
+
+        function makeResizable(resizer) {
+            const element = resizer.parentElement;
+            let isResizing = false;
+
+            resizer.addEventListener("mousedown", (e) => {
+                e.preventDefault();
+                isResizing = true;
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (!isResizing) return;
+                const newWidth = Math.min(200, Math.max(80, e.clientX - element.getBoundingClientRect().left));
+                const newHeight = Math.max(40, e.clientY - element.getBoundingClientRect().top);
+                element.style.width = `${newWidth}px`;
+                element.style.height = `${newHeight}px`;
+                const initialWidth = parseFloat(element.dataset.initialWidth);
+                const initialFontSize = parseFloat(element.dataset.initialFontSize);
+                element.style.fontSize = `${Math.max(10, initialFontSize * (newWidth / initialWidth))}px`;
+                updateAllWires();
+            });
+
+            document.addEventListener("mouseup", () => isResizing = false);
+        }
+
+        // Keep all other functions exactly the same as before
+        function createWire(startElem, endElem) {
+            const svg = document.getElementById("wires");
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("stroke", "#AAFF00");
+            line.setAttribute("stroke-width", "2");
+            line.setAttribute("stroke-dasharray", "5,5");
+            
+            const updatePosition = () => {
+                const startRect = startElem.getBoundingClientRect();
+                const endRect = endElem.getBoundingClientRect();
+                line.setAttribute("x1", startRect.left + startRect.width/2);
+                line.setAttribute("y1", startRect.top + startRect.height/2);
+                line.setAttribute("x2", endRect.left + endRect.width/2);
+                line.setAttribute("y2", endRect.top + endRect.height/2);
+            };
+            
+            wires.push({line, startElem, endElem, updatePosition});
+            svg.appendChild(line);
+            updatePosition();
+            return line;
+        }
+
+        function updateAllWires() {
+            wires.forEach(wire => wire.updatePosition());
+        }
+
+        function makeDraggable(element) {
+            let offsetX, offsetY, isDragging = false;
+
+            element.addEventListener("mousedown", (e) => {
+                if (e.target.classList.contains("resizer") || e.target.classList.contains("close-btn")) return;
+                isDragging = true;
+                offsetX = e.clientX - element.getBoundingClientRect().left;
+                offsetY = e.clientY - element.getBoundingClientRect().top;
+                element.style.zIndex = 1000;
+            });
+
+            document.addEventListener("mousemove", (e) => {
+                if (!isDragging) return;
+                element.style.left = `${Math.max(0, Math.min(e.clientX - offsetX, window.innerWidth - element.offsetWidth))}px`;
+                element.style.top = `${Math.max(0, Math.min(e.clientY - offsetY, window.innerHeight - element.offsetHeight))}px`;
+                updateAllWires();
+            });
+
+            document.addEventListener("mouseup", () => isDragging = false);
         }
     </script>
 </body>
